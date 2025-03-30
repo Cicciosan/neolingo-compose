@@ -1,0 +1,109 @@
+services:
+
+  post-service:
+    image: quarkus/neolingo-jvm
+    container_name: post-service
+    depends_on:
+      - db
+      - auth-server
+    restart: always
+    volumes:
+      - post_service_volume:/root
+    networks:
+      - post-service-network
+      - auth_server_network
+    ports:
+      - "8080:8080"
+
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: neolingo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - post-service-network
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "80:80"
+    networks:
+      - post-service-network
+    volumes:
+      - pg-admin:/var/lib/pgadmin
+    depends_on:
+      - db
+
+  neolingo-frontend:
+    image: neolingo-frontend:latest
+    container_name: neolingo-frontend
+    depends_on:
+      - post-service
+      - auth-server
+    networks:
+      - post-service-network
+      - auth_server_network
+    ports:
+      - "3000:3000"
+
+  auth-server:
+    image: keycloak/keycloak:latest
+    container_name: auth-server
+    environment:
+#      KC_HOSTNAME: auth-server
+      KC_HOSTNAME_PORT: 7080
+#      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://auth-server:7080/health/ready"]
+      interval: 15s
+      timeout: 2s
+      retries: 15
+    command: ["start-dev", "--http-port", "7080", "--https-port", "7443"]
+#    depends_on:
+#      - auth-server-db
+    ports:
+      - "7080:7080"
+      - "7443:7443"
+    volumes:
+      - auth-server:/opt/keycloak/data
+    networks:
+      - post-service-network
+      - auth_server_network
+
+#  auth-server-db:
+#    image: postgres:latest
+#    container_name: keycloak-db
+#    environment:
+#      - POSTGRES_DB=keycloak
+#      - POSTGRES_USER=keycloak
+#      - POSTGRES_PASSWORD=password
+#    volumes:
+#      - auth-server-db:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
+  pg-admin:
+  auth-server:
+  auth-server-db:
+  post_service_volume:
+
+networks:
+  post-service-network:
+    driver: bridge
+  auth_server_network:
+    driver: bridge
