@@ -14,7 +14,7 @@ services:
       - internal
 
   post-service:
-    image: post-service
+    image: ghcr.io/cicciosan/post-service
     container_name: post-service
     depends_on:
       - post-service-db
@@ -57,7 +57,7 @@ services:
       - post-service-db
 
   neolingo-frontend:
-    image: neolingo-frontend:latest
+    image: ghcr.io/cicciosan/neolingo-frontend:latest
     container_name: neolingo-frontend
     depends_on:
       - post-service
