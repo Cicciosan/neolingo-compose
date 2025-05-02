@@ -1,23 +1,35 @@
 services:
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      #- "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - neolingo-frontend
+    networks:
+      - internal
+
   post-service:
-    image: quarkus/neolingo-jvm
+    image: post-service
     container_name: post-service
     depends_on:
-      - db
+      - post-service-db
       - auth-server
     restart: always
     volumes:
       - post_service_volume:/root
     networks:
-      - post-service-network
-      - auth_server_network
+      - internal
     ports:
-      - "8080:8080"
+      - "8080:8080" #TODO: mettere in expose
 
-  db:
+  post-service-db:
     image: postgres:latest
-    container_name: postgres_db
+    container_name: post-service-db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: pass
@@ -25,9 +37,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - post-service-network
-    ports:
-      - "5432:5432"
+      - internal
+    expose:
+      - "5432"
 
   pgadmin:
     image: dpage/pgadmin4
@@ -36,13 +48,13 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "80:80"
+      - "81:81"
     networks:
-      - post-service-network
+      - internal
     volumes:
       - pg-admin:/var/lib/pgadmin
     depends_on:
-      - db
+      - post-service-db
 
   neolingo-frontend:
     image: neolingo-frontend:latest
@@ -51,9 +63,8 @@ services:
       - post-service
       - auth-server
     networks:
-      - post-service-network
-      - auth_server_network
-    ports:
+      - internal
+    expose:
       - "3000:3000"
 
   auth-server:
@@ -68,7 +79,7 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_LOG_LEVEL: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://auth-server:7080/health/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:7080/health/ready"]
       interval: 15s
       timeout: 2s
       retries: 15
@@ -81,8 +92,7 @@ services:
     volumes:
       - auth-server:/opt/keycloak/data
     networks:
-      - post-service-network
-      - auth_server_network
+      - internal
 
 #  auth-server-db:
 #    image: postgres:latest
@@ -96,6 +106,7 @@ services:
 
 
 volumes:
+  nginx:
   postgres_data:
   pg-admin:
   auth-server:
@@ -103,7 +114,5 @@ volumes:
   post_service_volume:
 
 networks:
-  post-service-network:
-    driver: bridge
-  auth_server_network:
+  internal:
     driver: bridge
