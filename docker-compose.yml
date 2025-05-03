@@ -83,9 +83,9 @@ services:
     #   interval: 15s
     #   timeout: 2s
     #   retries: 15
-    # command: ["start-dev", "--http-port", "7080", "--https-port", "7443"]
-#    depends_on:
-#      - auth-server-db
+    command: ["start-dev", "--http-port", "7080", "--https-port", "7443"]
+    depends_on:
+     - auth-server-db
     ports:
       - "7080:7080"
       - "7443:7443"
